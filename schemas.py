@@ -11,10 +11,10 @@ Model name is converted to lowercase for the collection name:
 - BlogPost -> "blogs" collection
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, EmailStr
+from typing import Optional, List
 
-# Example schemas (replace with your own):
+# App-specific schemas for Women's Safety Alert App
 
 class User(BaseModel):
     """
@@ -22,27 +22,44 @@ class User(BaseModel):
     Collection name: "user" (lowercase of class name)
     """
     name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    phone: str = Field(..., description="Primary phone number in E.164 or local format")
+    email: Optional[EmailStr] = Field(None, description="Email address")
+    default_message: str = Field(
+        "I need help. This is an emergency. Please check my location and contact me immediately.",
+        description="Default SOS message used when an alert is created"
+    )
+    pin: Optional[str] = Field(None, description="Optional 4-6 digit PIN for canceling false alerts")
 
+class Contact(BaseModel):
+    """
+    Trusted Contacts collection schema
+    Collection name: "contact"
+    """
+    user_id: str = Field(..., description="ID of the owning user (string ObjectId)")
+    name: str = Field(..., description="Contact name")
+    phone: Optional[str] = Field(None, description="Contact phone number")
+    email: Optional[EmailStr] = Field(None, description="Contact email address")
+
+class Location(BaseModel):
+    lat: float = Field(..., ge=-90, le=90, description="Latitude")
+    lng: float = Field(..., ge=-180, le=180, description="Longitude")
+    accuracy: Optional[float] = Field(None, ge=0, description="Accuracy in meters")
+
+class Alert(BaseModel):
+    """
+    Safety Alerts collection schema
+    Collection name: "alert"
+    """
+    user_id: str = Field(..., description="ID of the user who triggered the alert (string ObjectId)")
+    message: str = Field(..., description="Message sent with the alert")
+    location: Optional[Location] = Field(None, description="Location at the time of alert")
+    status: str = Field("active", description="Status of alert: active, canceled, resolved")
+    share_url: Optional[str] = Field(None, description="Public URL that can be shared with contacts")
+
+# Example schemas kept for reference (not used by the app directly)
 class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
-
-# Add your own schemas here:
-# --------------------------------------------------
-
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+    title: str
+    description: Optional[str] = None
+    price: float
+    category: str
+    in_stock: bool = True
